@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OSM Path Visualization</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <style>
+        #map {
+            height: 600px;
+            width: 100%;
+        }
+        .start-marker {
+            background-color: green;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+        .end-marker {
+            background-color: red;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script>
+        // Initialize the map
+        var map = L.map('map').setView([26.2687, 73.0464], 13); // Center of Jodhpur
+
+        // Add OpenStreetMap tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Function to read the CSV file
+        function readPathCSV(callback) {
+            fetch('path.csv')
+                .then(response => response.text())
+                .then(data => {
+                    const lines = data.trim().split('\n');
+                    const coordinates = [];
+                    
+                    // Skip header line
+                    for (let i = 1; i < lines.length; i++) {
+                        const line = lines[i].trim();
+                        if (line) {
+                            const [lat, lon] = line.split(',').map(parseFloat);
+                            coordinates.push([lat, lon]);
+                        }
+                    }
+                    
+                    callback(coordinates);
+                })
+                .catch(error => console.error('Error loading path data:', error));
+        }
+
+        // Function to draw the path and add markers
+        function drawPath(coordinates) {
+            if (coordinates.length === 0) return;
+            
+            // Create a polyline from the coordinates
+            var pathLine = L.polyline(coordinates, {
+                color: 'blue',
+                weight: 3,
+                opacity: 0.7
+            }).addTo(map);
+            
+            // Add start marker (green)
+            var startPoint = coordinates[0];
+            var startMarker = L.marker(startPoint, {
+                icon: L.divIcon({
+                    className: 'start-marker',
+                    html: '<div style="background-color: green; width: 15px; height: 15px; border-radius: 50%; border: 2px solid white;"></div>',
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                })
+            }).addTo(map);
+            startMarker.bindPopup("Starting Point: (" + startPoint[0].toFixed(4) + ", " + startPoint[1].toFixed(4) + ")");
+            
+            // Add end marker (red)
+            var endPoint = coordinates[coordinates.length - 1];
+            var endMarker = L.marker(endPoint, {
+                icon: L.divIcon({
+                    className: 'end-marker',
+                    html: '<div style="background-color: red; width: 15px; height: 15px; border-radius: 50%; border: 2px solid white;"></div>',
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                })
+            }).addTo(map);
+            endMarker.bindPopup("Ending Point: (" + endPoint[0].toFixed(4) + ", " + endPoint[1].toFixed(4) + ")");
+            
+            // Fit the map to the path bounds
+            map.fitBounds(pathLine.getBounds());
+        }
+
+        // Load and display the path
+        readPathCSV(drawPath);
+    </script>
+</body>
+</html>
